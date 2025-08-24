@@ -1,6 +1,8 @@
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { Embeddings } from '@langchain/core/embeddings';
 import { encode } from 'gpt-tokenizer';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // Try to import TraceManager from observability package if available
 let TraceManager: any = null;
@@ -63,6 +65,28 @@ interface MonitoringConfig {
 let _globalConfig: MonitoringConfig = {
   enabled: false,
 };
+
+/**
+ * Append prompt data to a log file for inspection
+ */
+function logPrompt(
+  input: any,
+  context: { userId?: string; modelId?: string; provider?: string } = {},
+) {
+  try {
+    const logPath = process.env.PROMPT_LOG_PATH || path.resolve(process.cwd(), 'prompt.log');
+    const record = {
+      timestamp: new Date().toISOString(),
+      userId: context.userId,
+      modelId: context.modelId,
+      provider: context.provider,
+      messages: input,
+    };
+    fs.appendFileSync(logPath, `${JSON.stringify(record)}\n`, 'utf8');
+  } catch (error) {
+    console.error('[Providers Monitoring] Failed to write prompt log:', error);
+  }
+}
 
 /**
  * Initialize monitoring with configuration
@@ -184,6 +208,7 @@ export function wrapChatModelWithMonitoring(
     });
 
     try {
+      logPrompt(input, context);
       const result = await originalInvoke(input, options);
 
       // Extract usage data or calculate accurately
@@ -233,6 +258,7 @@ export function wrapChatModelWithMonitoring(
       });
 
       try {
+        logPrompt(input, context);
         const stream = await originalStream(input, options);
 
         // Create a new readable stream that logs the output
