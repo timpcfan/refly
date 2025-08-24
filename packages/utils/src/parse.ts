@@ -22,8 +22,12 @@ export const safeStringifyJSON = (value: any, errorCallback?: (e: unknown) => st
   }
 };
 
-export const safeEqual = (val1, val2): boolean => {
-  return val1 && val2 && val1 === val2;
+export const safeEqual = (val1: unknown, val2: unknown): boolean => {
+  if (val1 == null || val2 == null) {
+    return false;
+  }
+
+  return val1 === val2;
 };
 
 export function isJSON(variable: any): boolean {
